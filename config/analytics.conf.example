@@ -1,0 +1,39 @@
+system {
+}
+
+webserver {
+	interface = "localhost"
+	port = 8080
+}
+
+amqp {
+	host {
+		server = "127.0.0.1"
+		port = 5672
+		username = "guest"
+		password = "guest"
+		vhost = "/"
+	}
+
+	exchange {
+		name = "analytics"
+		type = "topic"
+		durable = true
+	}
+
+	workqueue {
+		name = "analytics_input"
+		routing_key = "work.static.analytics"
+		durable = true
+		exclusive = false
+		autodelete = false
+	}
+
+	misbehavequeue {
+		name = "analytics_misbehave"
+		routing_key = "misbehave.static.analytics"
+		durable = true
+		exclusive = false
+		autodelete = false
+	}
+}
