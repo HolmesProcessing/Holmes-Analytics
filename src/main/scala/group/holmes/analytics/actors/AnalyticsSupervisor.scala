@@ -17,8 +17,8 @@ class AnalyticsSupervisor(cfgPath: String) extends Actor with ActorLogging {
 
 
 	//TODO: save a reference to the AE actor and pass along
-	var analyticEngineManager: ActorRef = _
-	var analyticServiceManager: ActorRef = _
+	val analyticEngineManager: ActorRef = context.actorOf(Dummy.props("analyticEngineManager"))
+	val analyticServiceManager: ActorRef = context.actorOf(Dummy.props("analyticServiceManager"))
 
 	// load the config
 	val cfg = ConfigFactory.parseFile(new File(cfgPath))
