@@ -5,7 +5,6 @@ import java.io.File
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import com.typesafe.config.Config
 
-
 object Core {
 	def props(cfg: Config, analyticEngineManager: ActorRef, analyticServiceManager: ActorRef): Props = { Props(new Core(cfg, analyticEngineManager, analyticServiceManager)) }
 }
@@ -15,13 +14,12 @@ class Core(cfg: Config, analyticEngineManager: ActorRef, analyticServiceManager:
 	override def postStop(): Unit = log.info("Core stopped")
 	override def receive = Actor.emptyBehavior
 
+	// create the scheduler
+	val scheduler = context.actorOf(Scheduler.props(analyticEngineManager, analyticServiceManager))
+
 	// create the WebServer
-	val webserver = context.actorOf(WebServer.props(cfg.getConfig("webserver")))
+	val webserver = context.actorOf(WebServer.props(cfg.getConfig("webserver"), scheduler))
 
 	// create the amqp consumer
-	val amqpConsumer = context.actorOf(RabbitConsumer.props(cfg.getConfig("amqp")))
-
-	// create the scheduler
-	//TODO: Pass ref to AnalyticEngineManager and AnalyticServiceManager to the scheduler
-	val scheduler = context.actorOf(Scheduler.props(analyticEngineManager, analyticServiceManager))
+	val amqpConsumer = context.actorOf(RabbitConsumer.props(cfg.getConfig("amqp"), scheduler))
 }

@@ -21,9 +21,9 @@ amqp {
 		durable = true
 	}
 
-	workqueue {
+	queue {
 		name = "analytics_input"
-		routing_key = "work.static.analytics"
+		routingKey = "work.static.analytics"
 		durable = true
 		exclusive = false
 		autodelete = false
@@ -31,7 +31,7 @@ amqp {
 
 	misbehavequeue {
 		name = "analytics_misbehave"
-		routing_key = "misbehave.static.analytics"
+		routingKey = "misbehave.static.analytics"
 		durable = true
 		exclusive = false
 		autodelete = false
