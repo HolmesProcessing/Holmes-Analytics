@@ -20,6 +20,8 @@ libraryDependencies ++= {
 		"ch.qos.logback"      %  "logback-classic"         % "1.2.3",
 		"io.getquill"         %% "quill-cassandra"         % "1.2.1",
 		"joda-time"           % "joda-time"                % "2.9.7",
-		"com.rabbitmq"        % "amqp-client"              % "3.4.2"
+		"com.rabbitmq"        % "amqp-client"              % "3.4.2",
+		"com.cloudera.livy"   % "livy-client-common"       % "0.2.0",
+		"com.cloudera.livy"   % "livy-scala-api_2.11"      % "0.3.0"
 		)
 }

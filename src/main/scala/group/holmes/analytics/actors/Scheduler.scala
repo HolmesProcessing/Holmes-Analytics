@@ -12,10 +12,16 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 
+/** Factory for [[group.holmes.analytics.actors.Scheduler]] actors. */
 object Scheduler {
+	/** Creates a Scheduler with:
+	 *
+	 *  @param analyticEngineManager
+	 *  @param analyticServiceManager
+	 */
 	def props(analyticEngineManager: ActorRef, analyticServiceManager: ActorRef): Props = Props(new Scheduler(analyticEngineManager, analyticServiceManager))
 
-	// Messages
+	/** Messages */
 	// Message used to create a new Job Actor
 	final case class New(name: String, engine: String, service: String, parameters: HashMap[String, String])
 
@@ -28,7 +34,9 @@ object Scheduler {
 	// Get a list of all jobs
 	final case class List()
 
-	//Exposed objs
+
+	/** Exposed ccs */
+	// Job object to track and keep state
 	final case class ScheduledJob(ref: ActorRef, id: UUID, name: String, status: String)
 }
 
