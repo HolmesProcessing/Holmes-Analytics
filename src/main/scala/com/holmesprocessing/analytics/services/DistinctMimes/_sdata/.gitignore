@@ -44,4 +44,3 @@ org.scala-ide.sdt.update-site/site.xml`
 .yar
 
 # blacklist config files
-config/analytics.conf

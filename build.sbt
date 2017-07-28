@@ -1,6 +1,6 @@
 name := "Holmes-Analytics"
 version := "0.1"
-organization := "group.holmes"
+organization := "com.holmesprocessing"
 
 scalaVersion := "2.12.2"
 
@@ -25,3 +25,6 @@ libraryDependencies ++= {
 		"com.cloudera.livy"   % "livy-scala-api_2.11"      % "0.3.0"
 		)
 }
+
+// ignore all our "_sdata" folders
+excludeFilter in unmanagedSources := HiddenFileFilter || "*_sdata*"

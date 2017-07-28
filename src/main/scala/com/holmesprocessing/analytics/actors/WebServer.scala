@@ -1,4 +1,4 @@
-package group.holmes.analytics.actors
+package com.holmesprocessing.analytics.actors
 
 import java.text.{ ParseException, SimpleDateFormat }
 import java.util.{ Date, UUID }
@@ -37,14 +37,29 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 
 	implicit val materializer = ActorMaterializer()
 
-	implicit val timeout: Timeout = 5.seconds
+	implicit val timeout: Timeout = 9000.seconds
 
 	val route =
+		path("api" / "v1" / "jobs" / "get") {
+			pathEnd {
+				get {
+					parameters('id.as[String]) { id =>
+						onSuccess(scheduler ? SchedulerProtocol.GetResult(UUID.fromString(id))) {
+							case resp: String =>
+								complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, resp))
+							case t =>
+								log.warning("WebServer Failure: {}", t)
+								complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "Error occured"))
+						}
+					}
+				}
+			}
+		} ~
 		path("api" / "v1" / "jobs") {
 			pathEnd {
 				get {
-					onSuccess(scheduler ? Scheduler.List()) {
-						case resp: HashMap[UUID, Scheduler.ScheduledJob] =>
+					onSuccess(scheduler ? SchedulerProtocol.GetList()) {
+						case resp: HashMap[UUID, JobRef] =>
 							complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, resp.toString))
 						case t =>
 							log.warning("WebServer Failure: {}", t)
@@ -53,7 +68,7 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 				} ~
 					post {
 						formFields('name.as[String], 'engine.as[String], 'service.as[String]) { (name, engine, service) =>
-							onSuccess(scheduler ? Scheduler.New(name, engine, service, HashMap.empty[String, String])) {
+							onSuccess(scheduler ? SchedulerProtocol.New(name, engine, service, HashMap.empty[String, String])) {
 								case resp: UUID =>
 									complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, resp.toString))
 								case t =>
