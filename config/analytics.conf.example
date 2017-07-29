@@ -1,4 +1,5 @@
 system {
+	servicesPath = "./src/main/scala/com/holmesprocessing/analytics/services"
 }
 
 webserver {
@@ -21,7 +22,7 @@ amqp {
 		durable = true
 	}
 
-	queue {
+	consumequeue {
 		name = "analytics_input"
 		routingKey = "work.static.analytics"
 		durable = true
@@ -36,4 +37,16 @@ amqp {
 		exclusive = false
 		autodelete = false
 	}
+}
+
+cassandra {
+	host = "10.0.1.2"
+	username = "cuser"
+	password = "cpassword"
+}
+
+spark {
+	sparkSubmitPath = "/usr/local/spark/bin/spark-submit"
+	arguments = ""
+	spark-cassandra-connector = "2.0.3-s_2.11"
 }

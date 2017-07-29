@@ -1,4 +1,4 @@
-package group.holmes.analytics.actors
+package com.holmesprocessing.analytics.actors
 
 import java.io.File
 
@@ -15,14 +15,12 @@ class AnalyticsSupervisor(cfgPath: String) extends Actor with ActorLogging {
 	override def postStop(): Unit = log.info("Holmes-Analytics stopped")
 	override def receive = Actor.emptyBehavior
 
-
-	//TODO: save a reference to the AE actor and pass along
-	val analyticEngineManager: ActorRef = context.actorOf(Dummy.props("analyticEngineManager"))
-	val analyticServiceManager: ActorRef = context.actorOf(Dummy.props("analyticServiceManager"))
-
 	// load the config
 	val cfg = ConfigFactory.parseFile(new File(cfgPath))
 
+	// create the aem
+	val analyticEngineManager: ActorRef = context.actorOf(AnalyticEngineManager.props(cfg))
+
 	// create the core
-	val core = context.actorOf(Core.props(cfg, analyticEngineManager, analyticServiceManager))
+	val core = context.actorOf(Core.props(cfg, analyticEngineManager))
 }

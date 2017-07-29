@@ -1,4 +1,4 @@
-package group.holmes.analytics.actors
+package com.holmesprocessing.analytics.actors
 
 import java.util.UUID
 

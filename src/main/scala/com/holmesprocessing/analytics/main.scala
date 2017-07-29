@@ -1,8 +1,8 @@
-package group.holmes.analytics
+package com.holmesprocessing.analytics
 
 import akka.actor.ActorSystem
 
-import group.holmes.analytics.actors._
+import com.holmesprocessing.analytics.actors._
 
 
 object HolmesAnalytics extends App {

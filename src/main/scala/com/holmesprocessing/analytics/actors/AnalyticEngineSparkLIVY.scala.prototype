@@ -1,0 +1,68 @@
+package com.holmesprocessing.analytics.actors
+
+import java.io.File
+import java.util.UUID
+import java.net.URI
+
+import scala.collection.mutable.HashMap
+import scala.concurrent.duration._
+import scala.concurrent.Await
+
+import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.pattern.ask
+import akka.util.Timeout
+import com.typesafe.config.ConfigFactory
+
+import com.cloudera.livy.LivyClientBuilder
+import com.cloudera.livy.scalaapi._
+
+import com.holmesprocessing.analytics.types.GenericAnalyticEngine
+
+
+
+object AnalyticEngineSpark {
+	def props(url: String): Props = Props(new AnalyticEngineSpark(url))
+}
+
+class AnalyticEngineSpark(url: String) extends GenericAnalyticEngine with Actor with ActorLogging {
+	private var scalaClient: LivyScalaClient = new LivyClientBuilder(false).setURI(new URI(url)).build().asScalaClient
+	private var status: String = "Down"
+
+	private val running = HashMap.empty[UUID, ScalaJobHandle[Unit]]
+
+
+	override def preStart(): Unit = log.info("AnalyticEngineSpark started")
+	override def postStop(): Unit = log.info("AnalyticEngineSpark stopped")
+
+	override def receive = {
+		// default catch-all
+		case x => log.warning("Received unknown message: {}", x)
+	}
+
+
+	def getStatus(): String = status
+
+	/** Submits a job to the execution queue. This will _not_ run the job directly if there
+	 * aren't enough worker threads availible.
+	 */
+	def execute(ctx: => Any): UUID = {
+		val id = UUID.randomUUID()
+		
+		//TODO: Write an example in documentation for service creators
+		//      Expects ctx to be of "fn: ScalaJobContext"
+		this.running += (id -> scalaClient.submit { context => ctx })
+		id
+	}
+
+	/** This is currently not supported with this version of livy,
+	 *  the only workaround would be to tear down the client and restart
+	 *  it completly but this would kill all other jobs.
+	 */
+	def stop(id: UUID, force: Boolean): Boolean = false
+
+	/** Stop the client WITH the underlying context (no more msgs can be send to it) */
+	def shutdown: Unit = {
+		scalaClient.stop(true)
+	}
+
+}
