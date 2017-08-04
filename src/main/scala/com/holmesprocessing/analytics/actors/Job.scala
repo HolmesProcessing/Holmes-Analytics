@@ -2,7 +2,6 @@ package com.holmesprocessing.analytics.actors
 
 import java.util.UUID
 
-import scala.collection.mutable.HashMap
 import scala.concurrent.duration._
 import scala.concurrent._
 import ExecutionContext.Implicits.global
@@ -17,7 +16,7 @@ import com.holmesprocessing.analytics.types.{AnalyticEngineProtocol, GenericAnal
 
 
 object Job {
-	def props(id: UUID, name: String, analyticEngine: ActorRef, analyticService: GenericAnalyticService, servicesPath: String, parameters: HashMap[String, String]): Props = Props(new Job(id, name, analyticEngine, analyticService, servicesPath, parameters))
+	def props(id: UUID, name: String, analyticEngine: ActorRef, analyticService: GenericAnalyticService, servicesPath: String, parameters: Map[String, String]): Props = Props(new Job(id, name, analyticEngine, analyticService, servicesPath, parameters))
 }
 
 object JobProtocol {
@@ -27,7 +26,7 @@ object JobProtocol {
 	final case class GetResult()
 }
 
-class Job(id: UUID, name: String, analyticEngine: ActorRef, analyticService: GenericAnalyticService, servicesPath: String, parameters: HashMap[String, String]) extends Actor with ActorLogging {
+class Job(id: UUID, name: String, analyticEngine: ActorRef, analyticService: GenericAnalyticService, servicesPath: String, parameters: Map[String, String]) extends Actor with ActorLogging {
 	override def preStart(): Unit = log.info("Job " + name + " started")
 	override def postStop(): Unit = log.info("Job " + name + " stopped")
 
