@@ -29,7 +29,9 @@ object SchedulerProtocol {
 	final case class GetStatus(id: UUID)
 	final case class Refresh()
 	final case class GetList()
+
 	final case class GetJob(id: UUID)
+	final case class DeleteJob(id: UUID)
 	final case class GetResult(id: UUID)
 }
 
@@ -91,6 +93,17 @@ class Scheduler(analyticEngineManager: ActorRef, servicesPath: String) extends A
 		case msg: SchedulerProtocol.GetResult =>
 			if (jobs.contains(msg.id)) {
 				jobs(msg.id).ref forward JobProtocol.GetResult()
+			} else {
+				//TODO: better error management using supervision
+				sender() ! "unknown id"
+			}
+
+		// delete a job
+		case msg: SchedulerProtocol.DeleteJob =>
+			if (jobs.contains(msg.id)) {
+				context stop jobs(msg.id).ref
+				this.jobs -= msg.id
+				sender() ! "done"
 			} else {
 				//TODO: better error management using supervision
 				sender() ! "unknown id"

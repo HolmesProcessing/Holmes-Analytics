@@ -5,6 +5,8 @@ system {
 webserver {
 	interface = "localhost"
 	port = 8080
+	# this should point to the directory that holds the "web" folder
+	staticDir = "./src/main"
 }
 
 amqp {

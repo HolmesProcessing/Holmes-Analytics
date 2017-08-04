@@ -2,6 +2,8 @@ package com.holmesprocessing.analytics.actors
 
 import java.text.{ ParseException, SimpleDateFormat }
 import java.util.{ Date, UUID }
+import java.nio.file.{Files, Paths}
+
 
 import scala.util.{ Success, Failure }
 import scala.concurrent.duration._
@@ -104,11 +106,16 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 
 	implicit val timeout: Timeout = 10.seconds
 
+	val staticDir = cfg.getString("staticDir")
+
+
 	/*
 	TODO: Move the API documentation as soon as it is final.
 
 
-	   GET / -> Webfrontend
+	   GET / -> Redirect to /web
+
+	   GET /web -> The webinterface
 
 	   GET /api/v1 -> Base API URL, greeting
 	
@@ -118,9 +125,44 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 	   GET ../jobs/$UUID -> get all infos about job $UUID w/ result
 	DELETE ../jobs/$UUID -> delete job $UUID
 	   GET ../jobs/$UUID/result -> get result of job $UUID
-	
-	
 	*/
+	
+
+	private def getExtensions(fileName: String) : String = {
+		val index = fileName.lastIndexOf('.')
+		if(index != 0) {
+			fileName.drop(index+1)
+		}
+
+		""
+	}
+
+	def routeWeb =
+		pathPrefix("web") {
+			get {
+				entity(as[HttpRequest]) { requestData =>
+					complete {
+						val fullPath = requestData.uri.path.toString match {
+							case "/"=> Paths.get(staticDir + "/index.html")
+							case "" => Paths.get(staticDir + "/index.html")
+							case _ => Paths.get(staticDir +  requestData.uri.path.toString)
+						}
+
+						val ext = getExtensions(fullPath.getFileName.toString)
+						val mediaType = MediaTypes.forExtension(ext)
+						val c: ContentType = mediaType match {
+							case x: MediaType.Binary           => ContentType(x)
+							case x: MediaType.WithFixedCharset => ContentType(x)
+							case x: MediaType.WithOpenCharset  => ContentType(x, HttpCharsets.`UTF-8`)
+						}
+
+						val byteArray = Files.readAllBytes(fullPath)
+						HttpResponse(StatusCodes.OK, entity = HttpEntity(c, byteArray))
+					}
+				}
+			}
+		}
+	
 
 	val routeJobs =
 		pathPrefix("jobs") {
@@ -160,6 +202,15 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 								log.warning("WebServer Failure: {}", t)
 								complete(APIError(error = t.toString))
 						}
+					} ~
+					delete {
+						onSuccess(scheduler ? SchedulerProtocol.DeleteJob(id)) {
+							case resp: String =>
+								complete(APISuccess[String](result = resp))
+							case t =>
+								log.warning("WebServer Failure: {}", t)
+								complete(APIError(error = t.toString))
+						}
 					}
 				} ~
 				path( "result" ) {
@@ -189,10 +240,10 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 
 	val route =
 		pathSingleSlash {
-			redirect("/api/v1", StatusCodes.TemporaryRedirect)
+			redirect("/web/index.html", StatusCodes.TemporaryRedirect)
 		} ~
+		routeWeb ~
 		routeAPI
-		
 
 	val bindingFuture = Http(context.system).bindAndHandle(route, cfg.getString("interface"), cfg.getInt("port"))
 }
