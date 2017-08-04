@@ -1,14 +1,15 @@
 package com.holmesprocessing.analytics.actors
 
 import java.util.UUID
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Paths, NoSuchFileException}
 
 import scala.concurrent.duration._
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives
+import akka.http.scaladsl.server._
+import Directives._
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
@@ -27,12 +28,30 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 	override def postStop(): Unit = log.info("WebServer stopped")
 	override def receive: Receive = Actor.emptyBehavior
 
-	//TODO: Add blockingDispatcher with fixed threads
+	//TODO: Add blockingDispatcher with fixed amount of threads
 	implicit val executionContext = context.dispatcher
 
 	implicit val materializer = ActorMaterializer()
 
 	implicit val timeout: Timeout = 10.seconds
+
+	implicit def myExceptionHandler: ExceptionHandler =
+	ExceptionHandler {
+		case _: NoSuchFileException =>
+		extractUri { uri =>
+			log.debug("File not found: {}", uri)
+			complete(HttpResponse(StatusCodes.NotFound, entity = "File not found"))
+		}
+	}
+
+	private def getExtension(fileName: String) : String = {
+		val index = fileName.lastIndexOf('.')
+		if(index != 0) {
+			return fileName.drop(index+1)
+		}
+
+		""
+	}
 
 	val staticDir = cfg.getString("staticDir")
 
@@ -56,26 +75,19 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 	*/
 	
 
-	private def getExtension(fileName: String) : String = {
-		val index = fileName.lastIndexOf('.')
-		if(index != 0) {
-			fileName.drop(index+1)
-		}
-
-		""
-	}
-
 	def routeWeb =
 		pathPrefix("web") {
 			get {
 				entity(as[HttpRequest]) { requestData =>
-					complete {
-						val fullPath = requestData.uri.path.toString match {
-							case "/"=> Paths.get(staticDir + "/index.html")
-							case "" => Paths.get(staticDir + "/index.html")
-							case _ => Paths.get(staticDir +  requestData.uri.path.toString)
-						}
+					val uri = requestData.uri.path.toString
+					val fullPath = uri match {
+						case _ if uri.endsWith("/") => Paths.get(staticDir + uri + "/index.html")
+						case _ => Paths.get(staticDir + uri)
+					}
 
+					if(Files.isDirectory(fullPath)){
+						redirect(staticDir + uri + "/", StatusCodes.PermanentRedirect)
+					} else {
 						val ext = getExtension(fullPath.getFileName.toString)
 						val mediaType = MediaTypes.forExtension(ext)
 						val c: ContentType = mediaType match {
@@ -85,7 +97,7 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 						}
 
 						val byteArray = Files.readAllBytes(fullPath)
-						HttpResponse(StatusCodes.OK, entity = HttpEntity(c, byteArray))
+						complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(c, byteArray)))
 					}
 				}
 			}
@@ -119,7 +131,7 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 
 				}
 			} ~
-			path( JavaUUID ) { id =>
+			pathPrefix( JavaUUID ) { id =>
 				pathEnd {
 					// GET /jobs/$UUID
 					get {

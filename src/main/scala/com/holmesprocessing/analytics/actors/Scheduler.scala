@@ -45,26 +45,26 @@ class Scheduler(analyticEngineManager: ActorRef, servicesPath: String) extends A
 		// request to create a new job
 		case msg: SchedulerProtocol.New =>
 			val id = UUID.randomUUID()
-			val service = this.getService(msg.service)
+			val service = getService(msg.service)
 
 			//TODO: does the service or the user decide which engine to use?
 			val ref = context.actorOf(
 				Job.props(
 					id,
 					msg.name,
-					this.getEngine(service.engine),
+					getEngine(service.engine),
 					service,
 					servicesPath,
 					msg.parameters))
 
-			this.jobs += (id -> JobRef(ref, id, msg.name, "unknown"))
+			jobs += (id -> JobRef(ref, id, msg.name, "unknown"))
 			sender() ! id
 
 		// request to get the status of a job
 		case msg: SchedulerProtocol.GetStatus =>
 			if (jobs.contains(msg.id)) {
 				//jobs(msg.id) forward JobProtocol.GetStatus()
-				this.jobs += (msg.id -> this.refreshStatus(jobs(msg.id)))
+				jobs += (msg.id -> refreshStatus(jobs(msg.id)))
 				sender() ! jobs(msg.id).status
 			} else {
 				//TODO: better error management using supervision
@@ -73,15 +73,16 @@ class Scheduler(analyticEngineManager: ActorRef, servicesPath: String) extends A
 
 		// refresh all jobs
 		case msg: SchedulerProtocol.Refresh =>
-			jobs.foreach { case (id, job) => this.jobs += (id -> this.refreshStatus(job)) }
+			jobs.foreach { case (id, job) => jobs += (id -> refreshStatus(job)) }
 
 		// get a list back
 		case msg: SchedulerProtocol.GetList =>
-			sender() ! JobRefMap(this.jobs)
+			sender() ! JobRefMap(jobs)
 
 		// get a job back
 		case msg: SchedulerProtocol.GetJob =>
 			if (jobs.contains(msg.id)) {
+				jobs += (msg.id -> refreshStatus(jobs(msg.id)))
 				sender ! jobs(msg.id)
 			} else {
 				//TODO: better error management using supervision
@@ -101,7 +102,7 @@ class Scheduler(analyticEngineManager: ActorRef, servicesPath: String) extends A
 		case msg: SchedulerProtocol.DeleteJob =>
 			if (jobs.contains(msg.id)) {
 				context stop jobs(msg.id).ref
-				this.jobs -= msg.id
+				jobs -= msg.id
 				sender() ! "done"
 			} else {
 				//TODO: better error management using supervision

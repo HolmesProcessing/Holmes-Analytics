@@ -1,0 +1,68 @@
+<div class="row">
+	<div class="col-md-12">
+		<div class="panel panel-holmes">
+		<div class="panel-heading">Start a new job</div>
+			<div class="panel-body">
+				<form class="form-horizontal" id="jobs-create-form">
+
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Name</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" name="name">
+						</div>
+					</div>
+
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Service</label>
+						<div class="col-sm-10">
+							<select class="form-control" name="service">
+								<option value="DistinctMimes">Distinct Mimes</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Engine</label>
+						<div class="col-sm-10">
+							<select class="form-control" name="engine">
+								<option value="spark">Apache Spark</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="form-group">
+						<div class="col-sm-offset-2 col-sm-10">
+							<button type="submit" class="btn btn-default">Create job</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<div class="col-md-12">
+		<div class="panel panel-holmes">
+		<div class="panel-heading">Results</div>
+			<div class="panel-body">
+				<button id="jobs-refresh-btn" type="button" class="btn btn-default">Refresh</button>
+
+				<div class="table-responsive">
+					<table class="table table-striped" id="jobs-list">
+						<thead>
+							<tr>
+								<th>Id</th>
+								<th>Name</th>
+								<th>Status</th>
+							</tr>
+						</thead>
+						<tbody>
+							
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script type="text/javascript" src="modules/jobs/list.js"></script>

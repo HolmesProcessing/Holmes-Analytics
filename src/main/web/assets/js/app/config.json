@@ -1,0 +1,6 @@
+{
+	"api_url": "",
+	"debug": false,
+	"services": ["ASNMETA", "CUCKOO", "DNSMETA", "GOGADGET", "OBJDUMP", "PEID", "PEINFO", "VIRUSTOTAL", "YARA", "ZIPMETA"],
+	"hide_fields": true
+}
