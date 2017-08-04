@@ -1,22 +1,10 @@
 package com.holmesprocessing.analytics.actors
 
-import java.io.File
-import java.util.UUID
-import java.net.URI
-
-import scala.collection.mutable.HashMap
-import scala.concurrent.duration._
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.sys.process._
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
-import akka.pattern.ask
-import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
-
-import com.cloudera.livy.LivyClientBuilder
-import com.cloudera.livy.scalaapi._
+import akka.actor.{ Props }
 
 import com.holmesprocessing.analytics.types.{GenericAnalyticEngine}
 

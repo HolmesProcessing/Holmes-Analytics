@@ -1,6 +1,5 @@
 package com.holmesprocessing.analytics.actors
 
-import java.io.File
 import java.util.UUID
 
 import scala.concurrent.duration._
@@ -9,11 +8,11 @@ import scala.concurrent.Await
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.pattern.ask
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
 
 import com.holmesprocessing.analytics.types.{GenericAnalyticService}
 
 import com.holmesprocessing.analytics.services.distinctmimes.DistinctMimes
+
 
 // To track and keep state
 final case class JobRef(ref: ActorRef, id: UUID, name: String, status: String)

@@ -1,94 +1,22 @@
 package com.holmesprocessing.analytics.actors
 
-import java.text.{ ParseException, SimpleDateFormat }
-import java.util.{ Date, UUID }
+import java.util.UUID
 import java.nio.file.{Files, Paths}
 
-
-import scala.util.{ Success, Failure }
 import scala.concurrent.duration._
-import scala.concurrent.{ Future, Await }
-import scala.collection.JavaConverters._
 
-
-import akka.actor.ActorSystem
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 
-import spray.json._
-import spray.json.DefaultJsonProtocol._
-
 import com.typesafe.config.Config
 
-final case class APISuccess[T](status: String = "success", result: T)
-final case class APIError(status: String = "failure", error: String)
+import com.holmesprocessing.analytics.types.{JsonSupport, APISuccess, APIError}
 
-trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
-	
-	implicit object UUIDFormat extends JsonFormat[UUID] {
-		def write(uuid: UUID) = JsString(uuid.toString)
-		def read(value: JsValue) = {
-			value match {
-				case JsString(uuid) => UUID.fromString(uuid)
-				case _              => throw DeserializationException("Expected hexadecimal UUID string")
-			}
-		}
-	}
-
-	implicit object ActorRefFormat extends JsonFormat[ActorRef] {
-		def write(ar: ActorRef) = JsString(ar.toString)
-		def read(value: JsValue) = {
-			value match {
-				case _ => throw DeserializationException("Can't unmarshal ActorRef") //no possible without context
-			}
-		}
-	}
-
-	def parseIsoDateString(date: String): Option[Date] = {
-		if (date.length != 28) None
-		else try Some(localIsoDateFormatter.get().parse(date))
-		catch {
-			case p: ParseException => None
-		}
-	}
-
-	private val localIsoDateFormatter = new ThreadLocal[SimpleDateFormat] {
-		override def initialValue() = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
-	}
-
-	def dateToIsoString(date: Date) = localIsoDateFormatter.get().format(date)
-
-	implicit object DateFormat extends JsonFormat[Date] {
-
-		def write(date : Date) : JsValue = JsString(dateToIsoString(date))
-
-		def read(json: JsValue) : Date = json match {
-
-			case JsString(rawDate) => parseIsoDateString(rawDate) match {
-				case None => deserializationError(s"Expected ISO Date format, got $rawDate")
-				case Some(isoDate) => isoDate
-			}
-
-			case unknown => deserializationError(s"Expected JsString, got $unknown")
-		}
-	}
-
-
-	implicit val JobRefFormat = jsonFormat4(JobRef)
-	implicit val APISuccessUUIDFormat = jsonFormat2(APISuccess[UUID])
-	implicit val APISuccessJobRefFormat = jsonFormat2(APISuccess[JobRef])
-	implicit val APISuccessStringFormat = jsonFormat2(APISuccess[String])
-	implicit val APISuccessMapUJFormat = jsonFormat2(APISuccess[Map[UUID, JobRef]])
-	implicit val APIErrorFormat = jsonFormat2(APIError)
-}
 
 object WebServer {
 	def props(cfg: Config, scheduler: ActorRef): Props = Props(new WebServer(cfg, scheduler))
@@ -128,7 +56,7 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 	*/
 	
 
-	private def getExtensions(fileName: String) : String = {
+	private def getExtension(fileName: String) : String = {
 		val index = fileName.lastIndexOf('.')
 		if(index != 0) {
 			fileName.drop(index+1)
@@ -148,7 +76,7 @@ class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLoggin
 							case _ => Paths.get(staticDir +  requestData.uri.path.toString)
 						}
 
-						val ext = getExtensions(fullPath.getFileName.toString)
+						val ext = getExtension(fullPath.getFileName.toString)
 						val mediaType = MediaTypes.forExtension(ext)
 						val c: ContentType = mediaType match {
 							case x: MediaType.Binary           => ContentType(x)

@@ -3,14 +3,9 @@ package com.holmesprocessing.analytics.actors
 import java.util.UUID
 
 import scala.concurrent.duration._
-import scala.concurrent._
-import ExecutionContext.Implicits.global
-
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
-import com.typesafe.config.ConfigFactory
 import akka.util.Timeout
-import akka.pattern.ask
 
 import com.holmesprocessing.analytics.types.{AnalyticEngineProtocol, GenericAnalyticService}
 
