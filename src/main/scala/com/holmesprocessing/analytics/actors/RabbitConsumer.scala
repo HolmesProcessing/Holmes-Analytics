@@ -1,10 +1,8 @@
 package com.holmesprocessing.analytics.actors
 
-import java.util.UUID
-
-import akka.actor._
+import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import com.rabbitmq.client._
-import scala.concurrent.duration.{ FiniteDuration, _ }
+import scala.concurrent.duration._
 import com.typesafe.config.Config
 
 case class RabbitMessage(deliveryTag: Long, body: Array[Byte])

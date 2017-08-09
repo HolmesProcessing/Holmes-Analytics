@@ -1,90 +1,189 @@
 package com.holmesprocessing.analytics.actors
 
-import java.text.{ ParseException, SimpleDateFormat }
-import java.util.{ Date, UUID }
-import spray.json.{ DefaultJsonProtocol, DeserializationException, JsString, JsValue, JsonFormat, deserializationError }
+import java.util.UUID
+import java.nio.file.{Files, Paths, NoSuchFileException}
+
+import scala.concurrent.duration._
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import spray.json._
+import akka.http.scaladsl.server._
+import Directives._
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
-import spray.json.DefaultJsonProtocol._
-import scala.concurrent.duration._
-import scala.concurrent.{ Future, Await }
-import scala.collection.mutable.HashMap
-import scala.collection.JavaConverters._
-
-import scala.util.{ Success, Failure }
 
 import com.typesafe.config.Config
+
+import com.holmesprocessing.analytics.types.{JsonSupport, APISuccess, APIError}
+
 
 object WebServer {
 	def props(cfg: Config, scheduler: ActorRef): Props = Props(new WebServer(cfg, scheduler))
 }
 
-class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLogging {
+class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLogging with Directives with JsonSupport {
 	override def preStart(): Unit = log.info("WebServer started")
 	override def postStop(): Unit = log.info("WebServer stopped")
 	override def receive: Receive = Actor.emptyBehavior
 
+	//TODO: Add blockingDispatcher with fixed amount of threads
 	implicit val executionContext = context.dispatcher
 
 	implicit val materializer = ActorMaterializer()
 
-	implicit val timeout: Timeout = 9000.seconds
+	implicit val timeout: Timeout = 10.seconds
 
-	val route =
-		path("api" / "v1" / "jobs" / "get") {
+	implicit def myExceptionHandler: ExceptionHandler =
+	ExceptionHandler {
+		case _: NoSuchFileException =>
+		extractUri { uri =>
+			log.debug("File not found: {}", uri)
+			complete(HttpResponse(StatusCodes.NotFound, entity = "File not found"))
+		}
+	}
+
+	private def getExtension(fileName: String) : String = {
+		val index = fileName.lastIndexOf('.')
+		if(index != 0) {
+			return fileName.drop(index+1)
+		}
+
+		""
+	}
+
+	val staticDir = cfg.getString("staticDir")
+
+
+	/*
+	TODO: Move the API documentation as soon as it is final.
+
+
+	   GET / -> Redirect to /web
+
+	   GET /web -> The webinterface
+
+	   GET /api/v1 -> Base API URL, greeting
+	
+	   GET ../jobs -> get a list of job
+	  POST ../jobs -> create a new job
+
+	   GET ../jobs/$UUID -> get all infos about job $UUID w/ result
+	DELETE ../jobs/$UUID -> delete job $UUID
+	   GET ../jobs/$UUID/result -> get result of job $UUID
+	*/
+	
+
+	def routeWeb =
+		pathPrefix("web") {
+			get {
+				entity(as[HttpRequest]) { requestData =>
+					val uri = requestData.uri.path.toString
+					val fullPath = uri match {
+						case _ if uri.endsWith("/") => Paths.get(staticDir + uri + "/index.html")
+						case _ => Paths.get(staticDir + uri)
+					}
+
+					if(Files.isDirectory(fullPath)){
+						redirect(staticDir + uri + "/", StatusCodes.PermanentRedirect)
+					} else {
+						val ext = getExtension(fullPath.getFileName.toString)
+						val mediaType = MediaTypes.forExtension(ext)
+						val c: ContentType = mediaType match {
+							case x: MediaType.Binary           => ContentType(x)
+							case x: MediaType.WithFixedCharset => ContentType(x)
+							case x: MediaType.WithOpenCharset  => ContentType(x, HttpCharsets.`UTF-8`)
+						}
+
+						val byteArray = Files.readAllBytes(fullPath)
+						complete(HttpResponse(StatusCodes.OK, entity = HttpEntity(c, byteArray)))
+					}
+				}
+			}
+		}
+	
+
+	val routeJobs =
+		pathPrefix("jobs") {
 			pathEnd {
+				// GET /jobs
 				get {
-					parameters('id.as[String]) { id =>
-						onSuccess(scheduler ? SchedulerProtocol.GetResult(UUID.fromString(id))) {
-							case resp: String =>
-								complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, resp))
+					onSuccess(scheduler ? SchedulerProtocol.GetList()) {
+						case resp: JobRefMap =>
+							complete(APISuccess[Map[UUID, JobRef]](result = resp.m))
+						case t =>
+							log.warning("WebServer Failure: {}", t)
+							complete(APIError(error = t.toString))
+					}
+				} ~
+				// POST /jobs
+				post {
+					formFields('name.as[String], 'engine.as[String], 'service.as[String]) { (name, engine, service) =>
+						onSuccess(scheduler ? SchedulerProtocol.New(name, engine, service, Map.empty[String, String])) {
+							case resp: UUID =>
+								complete(APISuccess[UUID](result = resp))
 							case t =>
 								log.warning("WebServer Failure: {}", t)
-								complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "Error occured"))
+								complete(APIError(error = t.toString))
+						}
+					}
+
+				}
+			} ~
+			pathPrefix( JavaUUID ) { id =>
+				pathEnd {
+					// GET /jobs/$UUID
+					get {
+						onSuccess(scheduler ? SchedulerProtocol.GetJob(id)) {
+							case resp: JobRef =>
+								complete(APISuccess[JobRef](result = resp))
+							case t =>
+								log.warning("WebServer Failure: {}", t)
+								complete(APIError(error = t.toString))
+						}
+					} ~
+					delete {
+						onSuccess(scheduler ? SchedulerProtocol.DeleteJob(id)) {
+							case resp: String =>
+								complete(APISuccess[String](result = resp))
+							case t =>
+								log.warning("WebServer Failure: {}", t)
+								complete(APIError(error = t.toString))
+						}
+					}
+				} ~
+				path( "result" ) {
+					// GET /jobs/$UUID/result
+					get {
+						onSuccess(scheduler ? SchedulerProtocol.GetResult(id)) {
+							case resp: String =>
+								complete(APISuccess[String](result = resp))
+							case t =>
+								log.warning("WebServer Failure: {}", t)
+								complete(APIError(error = t.toString))
 						}
 					}
 				}
 			}
-		} ~
-		path("api" / "v1" / "jobs") {
-			pathEnd {
-				get {
-					onSuccess(scheduler ? SchedulerProtocol.GetList()) {
-						case resp: HashMap[UUID, JobRef] =>
-							complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, resp.toString))
-						case t =>
-							log.warning("WebServer Failure: {}", t)
-							complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "Error occured"))
-					}
-				} ~
-					post {
-						formFields('name.as[String], 'engine.as[String], 'service.as[String]) { (name, engine, service) =>
-							onSuccess(scheduler ? SchedulerProtocol.New(name, engine, service, HashMap.empty[String, String])) {
-								case resp: UUID =>
-									complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, resp.toString))
-								case t =>
-									log.warning("WebServer Failure: {}", t)
-									complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "Error occured"))
-							}
-						}
+		}
 
-					}
-			}
-		} ~
-			path("api" / "v1") {
+	val routeAPI =
+		pathPrefix("api" / "v1") {
+			pathEnd {
 				get {
 					complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "Holmes-Analytics API v1"))
 				}
-			}
+			} ~
+			routeJobs
+		}
+
+	val route =
+		pathSingleSlash {
+			redirect("/web/index.html", StatusCodes.TemporaryRedirect)
+		} ~
+		routeWeb ~
+		routeAPI
 
 	val bindingFuture = Http(context.system).bindAndHandle(route, cfg.getString("interface"), cfg.getInt("port"))
 }

@@ -1,8 +1,8 @@
 package com.holmesprocessing.analytics.actors
 
-import java.io.File
-
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import scala.concurrent.duration._
+
 import com.typesafe.config.Config
 
 object Core {
@@ -22,4 +22,9 @@ class Core(cfg: Config, analyticEngineManager: ActorRef) extends Actor with Acto
 
 	// create the amqp consumer
 	val amqpConsumer = context.actorOf(RabbitConsumer.props(cfg.getConfig("amqp"), scheduler))
+
+	// setup periodic tasks
+	implicit val executionContext = context.dispatcher
+	
+	context.system.scheduler.schedule(5 seconds, 5 seconds, scheduler, SchedulerProtocol.Refresh())
 }

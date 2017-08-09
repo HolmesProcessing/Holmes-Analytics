@@ -1,9 +1,6 @@
 package com.holmesprocessing.analytics.types
 
-import java.util.UUID
-
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
-import akka.pattern.ask
+import akka.actor.{ Actor, ActorLogging}
 
 
 object AnalyticEngineProtocol {

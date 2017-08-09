@@ -1,7 +1,5 @@
 package com.holmesprocessing.analytics.actors
 
-import java.io.File
-
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import com.typesafe.config.Config
 
