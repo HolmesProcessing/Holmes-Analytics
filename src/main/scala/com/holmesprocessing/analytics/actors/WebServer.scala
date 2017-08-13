@@ -18,11 +18,16 @@ import com.typesafe.config.Config
 
 import com.holmesprocessing.analytics.types.{JsonSupport, APISuccess, APIError}
 
-
+/** Factory for [[actors.WebServer]] actors. */
 object WebServer {
 	def props(cfg: Config, scheduler: ActorRef): Props = Props(new WebServer(cfg, scheduler))
 }
 
+/** Actor holding the webserver.
+ *
+ *  @param cfg WebServer config
+ *  @param scheduler ActorRef to the [[actors.Scheduler]] actor.
+ */
 class WebServer(cfg: Config, scheduler: ActorRef) extends Actor with ActorLogging with Directives with JsonSupport {
 	override def preStart(): Unit = log.info("WebServer started")
 	override def postStop(): Unit = log.info("WebServer stopped")

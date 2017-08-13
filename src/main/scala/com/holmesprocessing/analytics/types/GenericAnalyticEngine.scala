@@ -2,7 +2,7 @@ package com.holmesprocessing.analytics.types
 
 import akka.actor.{ Actor, ActorLogging}
 
-
+/** Holds all messages accepted by all engines with [[types.GenericAnalyticEngine]] trait. */
 object AnalyticEngineProtocol {
 	final case class GetStatus()
 	final case class GetResult()
@@ -15,7 +15,6 @@ object AnalyticEngineProtocol {
  *  This trait provides all necessary procedures that each analytic engine should support in some way.
  *  These functions are called and relied upon other actors, failure to implement them in your
  *  engine can result in unstable behaviour.
- *  
  *  All engine actors should directly initialize all their connections and needed contexts on 
  *  creation without any further method call to so.
  */
