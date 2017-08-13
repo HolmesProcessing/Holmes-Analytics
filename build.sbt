@@ -4,10 +4,7 @@ organization := "com.holmesprocessing"
 
 scalaVersion := "2.12.2"
 
-
 resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
-//this should only be a temporary fix due to mismatching sha1 sums
-//resolvers += "JBoss" at "https://repository.jboss.org/"
 
 
 libraryDependencies ++= {
@@ -29,4 +26,5 @@ libraryDependencies ++= {
 // ignore all our "_sdata" folders
 excludeFilter in unmanagedSources := HiddenFileFilter || "*_sdata*"
 
-scalacOptions in (Compile,doc) ++= Seq("-doc-title", "Holmes-Analytics", "-doc-version", version.value)
+// add scaladoc options
+scalacOptions in (Compile,doc) ++= Seq("-doc-title", name.value, "-doc-version", version.value)
