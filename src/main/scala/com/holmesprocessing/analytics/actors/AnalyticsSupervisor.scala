@@ -6,10 +6,12 @@ import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import com.typesafe.config.ConfigFactory
 
 
+/** Factory for [[actors.AnalyticsSupervisor]] actors. */
 object AnalyticsSupervisor {
 	def props(cfgPath: String): Props = Props(new AnalyticsSupervisor(cfgPath))
 }
 
+/** Main supervising actor and root node for all other actors. */
 class AnalyticsSupervisor(cfgPath: String) extends Actor with ActorLogging {
 	override def preStart(): Unit = log.info("Holmes-Analytics started")
 	override def postStop(): Unit = log.info("Holmes-Analytics stopped")

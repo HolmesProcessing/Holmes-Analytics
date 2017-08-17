@@ -22,6 +22,12 @@ $ sbt assembly
 ```
 The assembled jar file will be located in `./target/scala-2.11/Holmes-Analytics-assembly-0.1.jar`
 
+3) Copy `config/analytics.conf.example` to `config/analytics.conf` and perform any adjustments to the configuration to match your environment and needs.
+
+4) Execute via 
+```shell
+$ java -jar ./target/scala-2.11/Holmes-Analytics-assembly-0.1.jar ./config/analytics.conf
+```
 
 ## Configuration
 All necessary configuration can be done via the `config/analytics.conf` file.

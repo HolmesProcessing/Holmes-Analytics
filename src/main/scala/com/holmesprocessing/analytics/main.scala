@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 
 import com.holmesprocessing.analytics.actors._
 
-
+/** Root object, spawns the [[actors.AnalyticsSupervisor]] actor */
 object HolmesAnalytics extends App {
 	val system = ActorSystem("analytics")
 	import system.dispatcher

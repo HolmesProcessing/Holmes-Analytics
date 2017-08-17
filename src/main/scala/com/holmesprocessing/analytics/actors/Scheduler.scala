@@ -13,16 +13,16 @@ import com.holmesprocessing.analytics.types.{GenericAnalyticService}
 
 import com.holmesprocessing.analytics.services.distinctmimes.DistinctMimes
 
-
-// To track and keep state
+/** CC to keep track of a running job. */
 final case class JobRef(ref: ActorRef, id: UUID, name: String, status: String)
 final case class JobRefMap(m: Map[UUID, JobRef])
 
-/** Factory for [[com.holmesprocessing.analytics.actors.Scheduler]] actors. */
+/** Factory for [[actors.Scheduler]] actors. */
 object Scheduler {
 	def props(analyticEngineManager: ActorRef, servicesPath: String): Props = Props(new Scheduler(analyticEngineManager, servicesPath))
 }
 
+/** Holds all messages accepted by [[actors.Scheduler]] */
 object SchedulerProtocol {
 	final case class New(name: String, engine: String, service: String, parameters: Map[String, String])
 	final case class GetStatus(id: UUID)
@@ -34,6 +34,11 @@ object SchedulerProtocol {
 	final case class GetResult(id: UUID)
 }
 
+/** This actor creates new [[actors.Job]] actors and keeps track of them.
+ *
+ *  @param analyticEngineManager ActorRef to the [[actors.AnalyticEngineManager]] actor.
+ *  @param servicesPath path to the folder containing all services
+ */
 class Scheduler(analyticEngineManager: ActorRef, servicesPath: String) extends Actor with ActorLogging {
 	private var jobs = Map.empty[UUID, JobRef]
 	implicit val timeout: Timeout = 10.seconds //TODO: Discuss sensible value / error mitigation strategy
@@ -113,10 +118,12 @@ class Scheduler(analyticEngineManager: ActorRef, servicesPath: String) extends A
 		case x => log.warning("Received unknown message: {}", x)
 	}
 
+	/** Refreshes the status of a JobRef and returns the refreshed one. */
 	def refreshStatus(job: JobRef): JobRef = {
 		JobRef(job.ref, job.id, job.name, Await.result(job.ref ? JobProtocol.GetStatus(), Duration.Inf).asInstanceOf[String])
 	}
 
+	/** Creates a new instance of the named [[types.GenericAnalyticService]]. */
 	def getService(name: String): GenericAnalyticService = {
 		name match {
 			case "DistinctMimes" => new DistinctMimes()
@@ -124,6 +131,7 @@ class Scheduler(analyticEngineManager: ActorRef, servicesPath: String) extends A
 		}
 	}
 
+	/** Creates a new actor of the named [[types.GenericAnalyticEngine]]. */
 	def getEngine(name: String): ActorRef = {
 		Await.result(analyticEngineManager ? AnalyticEngineManagerProtocol.GetEngine(name), Duration.Inf).asInstanceOf[ActorRef]
 	}

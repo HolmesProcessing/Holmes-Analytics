@@ -5,10 +5,12 @@ import scala.concurrent.duration._
 
 import com.typesafe.config.Config
 
+/** Factory for [[actors.Core]] actors. */
 object Core {
 	def props(cfg: Config, analyticEngineManager: ActorRef): Props = { Props(new Core(cfg, analyticEngineManager)) }
 }
 
+/** Supervising actor for [[actors.Scheduler]], [[actors.WebServer]], and [[actors.RabbitConsumer]]. */
 class Core(cfg: Config, analyticEngineManager: ActorRef) extends Actor with ActorLogging {
 	override def preStart(): Unit = log.info("Core started")
 	override def postStop(): Unit = log.info("Core stopped")

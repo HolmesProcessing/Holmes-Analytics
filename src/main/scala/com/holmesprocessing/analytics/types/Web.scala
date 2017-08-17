@@ -11,13 +11,14 @@ import spray.json.DefaultJsonProtocol._
 
 import com.holmesprocessing.analytics.actors.{JobRef}
 
-
-
+/** API response for a successfull request. */
 final case class APISuccess[T](status: String = "success", result: T)
+
+/** API response for a failed request. */
 final case class APIError(status: String = "failure", error: String)
 
+/** Provides implicit JSON conversions. */
 trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
-	
 	implicit object UUIDFormat extends JsonFormat[UUID] {
 		def write(uuid: UUID) = JsString(uuid.toString)
 		def read(value: JsValue) = {
@@ -65,7 +66,6 @@ trait JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
 			case unknown => deserializationError(s"Expected JsString, got $unknown")
 		}
 	}
-
 
 	implicit val JobRefFormat = jsonFormat4(JobRef)
 	implicit val APISuccessUUIDFormat = jsonFormat2(APISuccess[UUID])
