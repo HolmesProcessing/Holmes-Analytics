@@ -27,4 +27,5 @@ libraryDependencies ++= {
 excludeFilter in unmanagedSources := HiddenFileFilter || "*_sdata*"
 
 // add scaladoc options
+target in (Compile,doc) := baseDirectory.value / "docs"
 scalacOptions in (Compile,doc) ++= Seq("-doc-title", name.value, "-doc-version", version.value)
